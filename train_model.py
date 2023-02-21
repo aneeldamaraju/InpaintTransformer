@@ -1,0 +1,117 @@
+from types import SimpleNamespace
+from utils.training_utils import *
+from models.bidirectional_transformer import BidirectionalTransformer
+from torch import nn
+import argparse
+import os
+
+# Arg parsing
+# Add default parameters
+args = SimpleNamespace()
+# Training parameters
+args.name = "DEFAULT_NAME"
+args.epochs = 2000
+args.start_from_epoch = 0
+args.learning_rate = 1e-6
+args.accum_grad = 10
+args.psz = 16
+args.in_dim = args.psz ** 2
+args.dev = 'cuda:0' if torch.cuda.is_available() else 'cpu'
+# Transformer parameters
+args.num_image_tokens = 24
+args.dim = 768
+args.hidden_dim = 3072
+args.n_layers = 20
+
+# Instantiate the parser
+parser = argparse.ArgumentParser()
+for key, val in args.__dict__:
+    parser.add_argument(f"--{key}", default=val)
+
+
+class TrainTransformer:
+    def __init__(self, ims, args):
+        self.model = BidirectionalTransformer(args).to(device=args.dev)
+        self.optim = torch.optim.Adam(self.model.transformer.parameters(), lr=args.learning_rate, betas=(0.9, 0.96),
+                                      weight_decay=4.5e-2)
+        self.ims = ims
+        self.loss_list = []
+        self.mask_ratio_list = []
+        self.accuracy_list = []
+        self.train_dataset = None
+        os.mkdir(f'./ckpts/{args.name}')
+
+    def train(self, args):
+        train_dataset = load_data(self.ims, args)
+        self.train_dataset = train_dataset
+        len_train_dataset = len(train_dataset)
+        shuffle_set = np.arange(0, len_train_dataset)
+        step = 0
+        for epoch in range(1, args.epochs + 1):
+            np.random.shuffle(shuffle_set)
+            epoch_loss = 0
+            epoch_accuracy = []
+            for idx in shuffle_set:
+                img = train_dataset[idx][0]
+                pts = train_dataset[idx][1].cpu().numpy()
+                img = img.to(device=args.dev)
+                for _ in range(5):
+                    # Generate a masked region
+                    _, mask_corners = gen_mask_rect(pts)
+                    # get patches from the unmasked region
+                    unmask_patches, unmask_coords = get_unmasked_aligned_blob_points(img, pts, mask_corners,
+                                                                                     int(args.num_unmask_tokens), args)
+                    #get patches from masked region
+                    mask_patches, mask_coords = get_random_mask_points(img, mask_corners, int(args.num_mask_tokens),
+                                                                       args)
+                    #normalize mask coordinates
+                    mask_coords = torch.divide(mask_coords, args.H)
+                    unmask_coords = torch.divide(unmask_coords, args.H)
+
+                    #Run the model and get predictions for each pixel
+                    preds = self.model(unmask_patches, unmask_coords, mask_coords)
+                    preds = preds.squeeze()
+                    #Get target colors
+                    target = mask_patches.to(args.dev).squeeze()
+
+                    # loss = F.cross_entropy((logits.T*mask_idxs).T.reshape(-1, logits.size(-1)), (target*mask_idxs).reshape(-1))
+                    # loss = ((preds[mask_idxs,...] - target[mask_idxs,...])**2).mean(dim=-1) #Patchwise loss
+
+                    lossfn = nn.BCELoss()
+                    loss = lossfn(preds, target)
+                    # print(loss.cpu().detach().numpy().item())
+
+                    # loss = F.cross_entropy(logits.reshape(-1, logits.size(-1)), target.reshape(-1))
+                    epoch_loss += loss.cpu().detach().numpy().item()
+                    # add an accuracy count here
+
+                    epoch_accuracy.append(100 * np.mean(
+                        ((preds > .5).to(torch.int) == (target > .5).to(torch.int)).to(torch.int).cpu().numpy()))
+                    loss.backward()
+                    if step % args.accum_grad == 0:
+                        self.optim.step()
+                        self.optim.zero_grad()
+                    step += 1
+
+            epoch_accuracy = np.mean(epoch_accuracy)
+            if epoch % 1 == 0:
+                print(f"Epoch {epoch}: Epoch Loss = {np.round(epoch_loss, 4)}, Epoch accuracy = {np.round([epoch_accuracy], 4)[0]}")
+            if epoch % 100 == 0:
+                torch.save(self.model.state_dict(), f'./ckpts/{args.name}/{epoch}.pt')
+                print(f'State Saved at ./ckpts/{args.name}/{epoch}.pt')
+            self.loss_list.append(np.round(epoch_loss, 4))
+            self.accuracy_list.append(np.round(epoch_accuracy, 4))
+
+if __name__ == '__main__':
+    args = parser.parse_args()
+    NUM_TRAINING_SAMPLES = 100
+    training_list = []
+    for _ in range(NUM_TRAINING_SAMPLES):
+        img, rad = generate_blob(args.H, args.W)
+        img = img.squeeze()
+        pts = get_pts_on_curve(rad, P=500).squeeze()
+        training_list.append((img, pts))
+    trained_model = TrainTransformer(training_list, args)
+    trained_model.train(args)
+    np.save(f'./ckpts/{args.name}/accuracy', trained_model.accuracy_list)
+    np.save(f'./ckpts/{args.name}/loss', trained_model.loss_list)
