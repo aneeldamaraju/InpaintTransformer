@@ -1,4 +1,4 @@
-from mask_utils import *
+from utils.mask_utils import *
 import torch
 import numpy as np
 from torch.nn import functional as F

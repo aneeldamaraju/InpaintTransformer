@@ -1,6 +1,6 @@
 import numpy as np
 import cv2
-from shape_utils import *
+from utils.shape_utils import *
 
 
 #Code from Dor Verbin 2022

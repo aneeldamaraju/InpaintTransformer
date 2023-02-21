@@ -52,7 +52,7 @@ def pt_in_rect(pt, rect_coords):
 
 if __name__ == '__main__':
     from matplotlib import pyplot as plt
-    from generate_blob import *
+    from utils.generate_blob import *
 
     plt.figure(figsize=(8, 8))
     for itr in range(16):
