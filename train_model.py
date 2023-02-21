@@ -7,25 +7,25 @@ import os
 
 # Arg parsing
 # Add default parameters
-args = SimpleNamespace()
+default_args = SimpleNamespace()
 # Training parameters
-args.name = "DEFAULT_NAME"
-args.epochs = 2000
-args.start_from_epoch = 0
-args.learning_rate = 1e-6
-args.accum_grad = 10
-args.psz = 16
-args.in_dim = args.psz ** 2
-args.dev = 'cuda:0' if torch.cuda.is_available() else 'cpu'
+default_args.name = "DEFAULT_NAME"
+default_args.epochs = 2000
+default_args.start_from_epoch = 0
+default_args.learning_rate = 1e-6
+default_args.accum_grad = 10
+default_args.psz = 16
+default_args.in_dim = default_args.psz ** 2
+default_args.dev = 'cuda:0' if torch.cuda.is_available() else 'cpu'
 # Transformer parameters
-args.num_image_tokens = 24
-args.dim = 768
-args.hidden_dim = 3072
-args.n_layers = 20
+default_args.num_image_tokens = 24
+default_args.dim = 768
+default_args.hidden_dim = 3072
+default_args.n_layers = 20
 
 # Instantiate the parser
 parser = argparse.ArgumentParser()
-for key, val in args.__dict__:
+for key, val in default_args.__dict__.items():
     parser.add_argument(f"--{key}", default=val)
 
 
@@ -104,9 +104,6 @@ class TrainTransformer:
 
 if __name__ == '__main__':
     args = parser.parse_args()
-    if args.name.lower() == "test":
-        print("TesT CompletE")
-        kadfl
     NUM_TRAINING_SAMPLES = 100
     training_list = []
     for _ in range(NUM_TRAINING_SAMPLES):
