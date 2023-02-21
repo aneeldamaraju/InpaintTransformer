@@ -104,6 +104,9 @@ class TrainTransformer:
 
 if __name__ == '__main__':
     args = parser.parse_args()
+    if args.name.lower() == "test":
+        print("TesT CompletE")
+        kadfl
     NUM_TRAINING_SAMPLES = 100
     training_list = []
     for _ in range(NUM_TRAINING_SAMPLES):
