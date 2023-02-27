@@ -97,6 +97,18 @@ class TrainTransformer:
             if epoch % 1 == 0:
                 print(f"Epoch {epoch}: Epoch Loss = {np.round(epoch_loss, 4)}, Epoch accuracy = {np.round([epoch_accuracy], 4)[0]}")
             if epoch % 100 == 0:
+                #MAKE SAVING SCRIPT HERE
+                try:
+                    os.mkdir("./ckpts")
+                    print('Checkpoints created at ./ckpts')
+                except:
+                    print("ckpts already created")
+
+                try:
+                    os.mkdir(f'./ckpts/{args.name}')
+                    print(f'Run directory created at ./ckpts/{args.name}')
+                except:
+                    print(f'Run directory at ./ckpts/{args.name} already exists! Did you forget to name the run?')
                 torch.save(self.model.state_dict(), f'./ckpts/{args.name}/{epoch}.pt')
                 print(f'State Saved at ./ckpts/{args.name}/{epoch}.pt')
             self.loss_list.append(np.round(epoch_loss, 4))
