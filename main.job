@@ -1,0 +1,11 @@
+#!/bin/bash
+#SBATCH --job-name=main.job
+#SBATCH --output=.out/mainOut.out
+#SBATCH --error=.out/mainErr.err
+#SBATCH --time=1-00:00
+#SBATCH --mem=4G
+#SBATCH --gres=gpu:1
+#SBATCH --qos=normal
+#SBATCH --mail-type=ALL
+#SBATCH --mail-user=aneeldamaraju@g.harvard.edu
+python main.py --name "TestRun"
