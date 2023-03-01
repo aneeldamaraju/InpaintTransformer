@@ -1,8 +1,8 @@
 from types import SimpleNamespace
 from utils.training_utils import *
-from utils.shape_utils import *
-from utils.generate_blob import generate_blob
 from models.bidirectional_transformer import BidirectionalTransformer
+from utils.shape_utils import *
+from utils.generate_shapes import generate_blob, generate_line
 from torch import nn
 import argparse
 import os
@@ -22,13 +22,15 @@ default_args.dev = 'cuda:0' if torch.cuda.is_available() else 'cpu'
 # Transformer parameters
 default_args.num_image_tokens = 24
 default_args.num_unmask_tokens = int(default_args.num_image_tokens*.5)
-default_args.num_mask_tokens = 20 #default_args.num_image_tokens - default_args.num_unmask_tokens
+default_args.num_mask_tokens = 20 #default_args.num_image_tokens - default_args.num_unmask_token
 default_args.dim = 768
 default_args.hidden_dim = 3072
 default_args.n_layers = 20
 #Image parameters
 default_args.H = 256
 default_args.W = 256
+default_args.shape = "Blob" #"Blob", "Line"
+default_args.use_slope = False
 
 # Instantiate the parser
 parser = argparse.ArgumentParser()
@@ -39,14 +41,13 @@ for key, val in default_args.__dict__.items():
 class TrainTransformer:
     def __init__(self, ims, args):
         self.model = BidirectionalTransformer(args).to(device=args.dev)
-        self.optim = torch.optim.Adam(self.model.parameters(), lr=args.learning_rate, betas=(0.9, 0.96),
+        self.optim = torch.optim.Adam(self.model.transformer.parameters(), lr=args.learning_rate, betas=(0.9, 0.96),
                                       weight_decay=4.5e-2)
         self.ims = ims
         self.loss_list = []
         self.mask_ratio_list = []
         self.accuracy_list = []
         self.train_dataset = None
-        
 
     def train(self, args):
         train_dataset = load_data(self.ims, args)
@@ -126,7 +127,10 @@ if __name__ == '__main__':
     NUM_TRAINING_SAMPLES = 100
     training_list = []
     for _ in range(NUM_TRAINING_SAMPLES):
-        img, rad = generate_blob(args.H, args.W)
+        if args.shape == "Blob":
+            img, rad = generate_blob(args.H, args.W)
+        elif args.shape == "Line":
+            img, rad = generate_line(args.H,args.W,args.use_slope)
         img = img.squeeze()
         pts = get_pts_on_curve(rad, P=500).squeeze()
         training_list.append((img, pts))

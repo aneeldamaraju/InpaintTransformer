@@ -103,21 +103,24 @@ def generate_blob(H=256, W=256, blobs=1):
     return img, pts
 
 
-def generate_line(H, W):
+def generate_line(H, W,use_slope=True):
     thresh = int(.2 * W)
 
     img_np = np.zeros((H, W), dtype=np.uint8)
 
     x_c = int(np.random.uniform(.2, .8) * H)
     ylist = np.arange(thresh, W - thresh, 0.001)
-    slope = 1 / np.random.uniform(-.2, .2)
-
-    xlist = x_c + ylist / slope
+    if use_slope:
+        slope = 1 / np.random.uniform(-.2, .2)
+        xlist = x_c + ylist / slope
+        pts = np.array([[x_c, 0], [int(x_c + W / slope), W], [H, W], [H, 0]])
+    else:
+        xlist = x_c + ylist *0
+        pts = np.array([[x_c, 0], [x_c, W], [H, W], [H, 0]])
 
     out_pts = np.array([[x, y] for (x, y) in zip(xlist, ylist)])
     out_pts = out_pts.reshape((1, -1, 2))
 
-    pts = np.array([[x_c, 0], [int(x_c + W / slope), W], [H, W], [H, 0]])
     # print(pts)
     pts = pts.reshape((1, -1, 2))
     cv2.fillPoly(img_np, pts, color=255, lineType=cv2.LINE_AA)
