@@ -41,7 +41,7 @@ for key, val in default_args.__dict__.items():
 class TrainTransformer:
     def __init__(self, ims, args):
         self.model = BidirectionalTransformer(args).to(device=args.dev)
-        self.optim = torch.optim.Adam(self.model.transformer.parameters(), lr=args.learning_rate, betas=(0.9, 0.96),
+        self.optim = torch.optim.Adam(self.model.parameters(), lr=args.learning_rate, betas=(0.9, 0.96),
                                       weight_decay=4.5e-2)
         self.ims = ims
         self.loss_list = []
