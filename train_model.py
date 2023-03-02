@@ -35,7 +35,7 @@ default_args.use_slope = False
 # Instantiate the parser
 parser = argparse.ArgumentParser()
 for key, val in default_args.__dict__.items():
-    parser.add_argument(f"--{key}", default=val)
+    parser.add_argument(f"--{key}", type=type(val), default=val)
 
 
 class TrainTransformer:

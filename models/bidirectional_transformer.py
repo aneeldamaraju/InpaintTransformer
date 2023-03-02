@@ -80,7 +80,7 @@ class BidirectionalTransformer(nn.Module):
         self.tok_emb_MLP = nn.Sequential(*[
             nn.Linear(args.in_dim, 2048),
             nn.GELU(),
-            nn.Linear(2048, int(args.dim)),
+            nn.Linear(2048, args.dim),
             nn.Dropout(p=0.1)
         ])
         self.pos_emb_MLP = nn.Sequential(*[
