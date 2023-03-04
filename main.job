@@ -1,12 +1,13 @@
 #!/bin/bash
-#SBATCH --job-name=main.job
+#NAME = "VertLine_128"
+#SBATCH --job-name=VertLine_128
 #SBATCH -p seas_gpu
-#SBATCH --output=mainOut.out
-#SBATCH --error=mainErr.err
+#SBATCH --output=logs/mainOut_%x.out
+#SBATCH --error=logs/mainErr_%x.err
 #SBATCH --time=1-00:00
 #SBATCH --mem=4G
 #SBATCH --gres=gpu:1
 #SBATCH --qos=normal
 #SBATCH --mail-type=ALL
 #SBATCH --mail-user=aneeldamaraju@g.harvard.edu
-python3 ./train_model.py --name "TestRun"
+python3 ./train_model.py --name "VertLine" --shape "Line" --dim 128
