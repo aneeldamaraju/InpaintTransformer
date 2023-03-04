@@ -30,16 +30,18 @@ class Encoder(nn.Module):
         ])
         self.dropout = nn.Dropout(p=0.1)
 
-    def forward(self, x):
-        # Use built-in multihead attention, where x is the key, query and value
-        attn, _ = self.MultiHeadAttention(x, x, x, need_weights=False)
-        attn = self.dropout(attn) #Dropout layer
-        x = x.add(attn) #Skip connection
-        x = self.LayerNorm1(x) #Layer norm
-        mlp = self.MLP(x) #MlP
-        x = x.add(mlp) #Skip connection
-        x = self.LayerNorm2(x) #Layer norm
-        return x
+    def forward(self, x,query):
+        #Use built-in multihead attention, where x is the key, and value,
+        attn, _ = self.MultiHeadAttention(query, x, x, need_weights=False)
+        attn = self.dropout(attn)
+        # print(attn.shape)
+        out = query.add(attn)
+        out = self.LayerNorm1(out)
+        mlp = self.MLP(out)
+        # print(mlp.shape)
+        out = out.add(mlp)
+        out = self.LayerNorm2(out)
+        return out
 
 
 class Decoder(nn.Module):
