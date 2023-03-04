@@ -31,7 +31,7 @@ default_args.H = 256
 default_args.W = 256
 default_args.shape = "Blob" #"Blob", "Line"
 default_args.use_slope = False
-
+default_args.normalize_embed = False
 # Instantiate the parser
 parser = argparse.ArgumentParser()
 for key, val in default_args.__dict__.items():
