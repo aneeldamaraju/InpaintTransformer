@@ -127,10 +127,13 @@ class BidirectionalTransformer(nn.Module):
             position_embeddings = (position_embeddings.T / position_embeddings.abs().max(dim=1)[0]).T
 
         embed = self.drop(self.ln(token_embeddings + position_embeddings))
-        embed = self.enc_blocks(embed)
+        for enc_block in self.enc_blocks:
+            embed = enc_block(embed, position_embeddings)
         # Embed the input mask positions and pass them as queries
         mask_embeds = self.pos_emb_MLP(mask_posns)
-        embed = self.dec_blocks(embed, mask_embeds)
-        # embed = self.dec_blocks(embed, mask_embeds)  #Uncomment for a second decoder layer
+        embed = self.dec_blocks[0](embed, mask_embeds)
+        for dec_block in self.dec_blocks[1:]:
+            embed = dec_block(embed, embed)
+        # embed = self.dec_blocks(embed,mask_embeds)
         out = self.decoder_pred(embed)
         return out
