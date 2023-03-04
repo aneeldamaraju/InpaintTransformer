@@ -77,12 +77,22 @@ class BidirectionalTransformer(nn.Module):
         super(BidirectionalTransformer, self).__init__()
         # Embeddings of tokens (codes) and positions ( not learned)
         # self.tok_emb = nn.Embedding(args.num_codebook_vectors + 1, args.dim,device = args.dev)
-        self.tok_emb_MLP = nn.Sequential(*[
-            nn.Linear(args.in_dim, 2048),
+        self.CNN_kernel = 9
+        self.tok_emb_CNN = nn.Sequential(*[
+            nn.Conv2d(1, 50, self.CNN_kernel),
             nn.GELU(),
-            nn.Linear(2048, args.dim),
-            nn.Dropout(p=0.1)
+            nn.Conv2d(50, 100, self.CNN_kernel),
+            nn.GELU(),
+            # Patchwise linear output dim = 1x200x(args.psz-(self.CNN_kernel*2 -2))xtwice
+            nn.Conv2d(100, 100, self.CNN_kernel),
+            nn.GELU(),
+            nn.Conv2d(100, 200, 1),
+            nn.Conv2d(200, 200, 1)
         ])
+        self.CNN_linear_dim = 200*(args.psz-(self.CNN_kernel -1)*3)**2
+        self.tok_emb_CNN_Linear =nn.Linear(self.CNN_linear_dim,args.dim)
+
+
         self.pos_emb_MLP = nn.Sequential(*[
             nn.Linear(2, 2048),
             nn.GELU(),
@@ -91,22 +101,31 @@ class BidirectionalTransformer(nn.Module):
         ])
 
         # The actual transformer encoder architecture
-        self.enc_blocks = nn.Sequential(*[Encoder(args.dim, args.hidden_dim) for _ in range(args.n_layers)])
-        # self.dec_blocks = nn.Sequential(*[Decoder(args.dim, args.hidden_dim) for _ in range(2)])# rn just 2 layers
-        self.dec_blocks = Decoder(args.dim, args.hidden_dim)  # 1 layer
+        self.enc_blocks = nn.ModuleList([Encoder(args.dim, args.hidden_dim) for _ in range(args.n_layers)])
+        self.dec_blocks = nn.ModuleList([Decoder(args.dim, args.hidden_dim) for _ in range(4)])# rn just 2 layers
+        # self.dec_blocks = Decoder(args.dim, args.hidden_dim)  # 1 layer
 
         #Final prediction is just linear + sigmoid
-        self.decoder_pred = nn.Sequential(
-            *[nn.Linear(args.dim, args.hidden_dim, bias=True), nn.GELU(), nn.Linear(args.hidden_dim, 1, bias=True),
-              nn.Sigmoid()])
+        self.decoder_pred = nn.Sequential(*[nn.Linear(args.dim,args.hidden_dim,bias=True),nn.GELU(),nn.Linear(args.hidden_dim,1,bias=True),nn.Sigmoid()])
 
         self.ln = nn.LayerNorm(args.dim, eps=1e-12)
         self.drop = nn.Dropout(p=0.1)
         self.apply(weights_init)
 
+        self.normalize_embed = args.normalize_embed
+
     def forward(self, x, posns=None, mask_posns=None):
-        token_embeddings = self.tok_emb_MLP(x)
+        token_embeddings = self.tok_emb_CNN(x.reshape(-1, 1, args.psz, args.psz))
+        # CNN token embeddings
+        token_embeddings = token_embeddings.reshape(-1, self.CNN_linear_dim)
+        # print(token_embeddings.shape)
+        token_embeddings = self.tok_emb_CNN_Linear(token_embeddings)
         position_embeddings = self.pos_emb_MLP(posns)
+
+        if self.normalize_embed:
+            token_embeddings = (token_embeddings.T / token_embeddings.abs().max(dim=1)[0]).T
+            position_embeddings = (position_embeddings.T / position_embeddings.abs().max(dim=1)[0]).T
+
         embed = self.drop(self.ln(token_embeddings + position_embeddings))
         embed = self.enc_blocks(embed)
         # Embed the input mask positions and pass them as queries
