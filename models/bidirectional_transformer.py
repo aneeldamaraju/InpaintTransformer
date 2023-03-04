@@ -111,11 +111,11 @@ class BidirectionalTransformer(nn.Module):
         self.ln = nn.LayerNorm(args.dim, eps=1e-12)
         self.drop = nn.Dropout(p=0.1)
         self.apply(weights_init)
-
+        self.psz = args.psz
         self.normalize_embed = args.normalize_embed
 
     def forward(self, x, posns=None, mask_posns=None):
-        token_embeddings = self.tok_emb_CNN(x.reshape(-1, 1, args.psz, args.psz))
+        token_embeddings = self.tok_emb_CNN(x.reshape(-1, 1, self.psz, self.psz))
         # CNN token embeddings
         token_embeddings = token_embeddings.reshape(-1, self.CNN_linear_dim)
         # print(token_embeddings.shape)
