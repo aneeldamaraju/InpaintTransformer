@@ -128,7 +128,7 @@ class BidirectionalTransformer(nn.Module):
             token_embeddings = (token_embeddings.T / token_embeddings.abs().max(dim=1)[0]).T
             position_embeddings = (position_embeddings.T / position_embeddings.abs().max(dim=1)[0]).T
 
-        embed = self.drop(self.ln(token_embeddings + position_embeddings))
+        embed = self.drop(self.ln(token_embeddings*args.scale_embed + position_embeddings))
         for enc_block in self.enc_blocks:
             embed = enc_block(embed, position_embeddings)
         # Embed the input mask positions and pass them as queries
