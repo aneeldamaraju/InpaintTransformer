@@ -102,6 +102,10 @@ class BidirectionalTransformer(nn.Module):
             nn.Dropout(p=0.1)
         ])
 
+        # Adding bias terms (CLS token and mask token)
+        self.CLS_token = nn.init.trunc_normal_(nn.Parameter(torch.zeros(1, args.dim)), 0., 0.02)
+        self.mask_token = nn.init.trunc_normal_(nn.Parameter(torch.zeros(1, args.dim)), 0., 0.02)
+
         # The actual transformer encoder architecture
         self.enc_blocks = nn.ModuleList([Encoder(args.dim, args.hidden_dim) for _ in range(args.n_layers)])
         self.dec_blocks = nn.ModuleList([Decoder(args.dim, args.hidden_dim) for _ in range(4)])# rn just 2 layers
@@ -116,12 +120,12 @@ class BidirectionalTransformer(nn.Module):
         self.psz = args.psz
         self.normalize_embed = args.normalize_embed
         self.scale_embed = args.scale_embed
+        self.query_training = args.query_training
 
     def forward(self, x, posns=None, mask_posns=None):
         token_embeddings = self.tok_emb_CNN(x.reshape(-1, 1, self.psz, self.psz))
         # CNN token embeddings
         token_embeddings = token_embeddings.reshape(-1, self.CNN_linear_dim)
-        # print(token_embeddings.shape)
         token_embeddings = self.tok_emb_CNN_Linear(token_embeddings)
         position_embeddings = self.pos_emb_MLP(posns)
 
@@ -129,11 +133,17 @@ class BidirectionalTransformer(nn.Module):
             token_embeddings = (token_embeddings.T / token_embeddings.abs().max(dim=1)[0]).T
             position_embeddings = (position_embeddings.T / position_embeddings.abs().max(dim=1)[0]).T
 
-        embed = self.drop(self.ln(token_embeddings*self.scale_embed + position_embeddings))
+        embed = token_embeddings*self.scale_embed + position_embeddings
+        embed = torch.concat([self.CLS_token,embed])
+        embed = self.drop(self.ln(embed))
         for enc_block in self.enc_blocks:
             embed = enc_block(embed, position_embeddings)
         # Embed the input mask positions and pass them as queries
-        mask_embeds = self.pos_emb_MLP(mask_posns)
+        if self.query_training:
+            mask_embeds = self.pos_emb_MLP(mask_posns)
+        else:
+            mask_embeds = self.pos_emb_MLP(mask_posns).detach()
+        mask_embeds = mask_embeds + self.mask_token
         embed = self.dec_blocks[0](embed, mask_embeds)
         for dec_block in self.dec_blocks[1:]:
             embed = dec_block(embed, embed)

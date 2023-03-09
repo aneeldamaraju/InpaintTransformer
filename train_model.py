@@ -33,6 +33,7 @@ default_args.shape = "Blob" #"Blob", "Line"
 default_args.use_slope = False
 default_args.normalize_embed = False
 default_args.scale_embed = 1.0e0
+default_args.query_training = True
 # Instantiate the parser
 parser = argparse.ArgumentParser()
 for key, val in default_args.__dict__.items():
@@ -105,7 +106,7 @@ class TrainTransformer:
             epoch_accuracy = np.mean(epoch_accuracy)
             if epoch % 1 == 0:
                 print(f"Epoch {epoch}: Epoch Loss = {np.round(epoch_loss, 4)}, Epoch accuracy = {np.round([epoch_accuracy], 4)[0]}")
-            if epoch % 100 == 0:
+            if epoch % 1000 == 0:
                 #MAKE SAVING SCRIPT HERE
                 try:
                     os.mkdir("./ckpts")
