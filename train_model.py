@@ -26,6 +26,7 @@ default_args.num_mask_tokens = 20 #default_args.num_image_tokens - default_args.
 default_args.dim = 768
 default_args.hidden_dim = 3072
 default_args.n_layers = 20
+default_args.n_dec_layers = 4
 #Image parameters
 default_args.H = 256
 default_args.W = 256
@@ -97,8 +98,8 @@ class TrainTransformer:
 
                     epoch_accuracy.append(100 * np.mean(
                         ((preds > .5).to(torch.int) == (target > .5).to(torch.int)).to(torch.int).cpu().numpy()))
-                    loss.backward()
                     if step % args.accum_grad == 0:
+                        loss.backward()
                         self.optim.step()
                         self.optim.zero_grad()
                     step += 1

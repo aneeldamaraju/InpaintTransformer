@@ -73,6 +73,26 @@ class Decoder(nn.Module):
         out = self.LayerNorm2(out) #Layer norm
         return out
 
+class MLPDecoder(nn.Module):
+    """
+    Transformer encoder using MultiHeadAttention and MLP along with skip connections and LayerNorm
+    Same thing as the encoder, but now one of the queries is an input
+    """
+    def __init__(self, dim=768, hidden_dim=3072):
+        super(MLPDecoder, self).__init__()
+        self.MLP = nn.Sequential(*[
+            nn.Linear(dim, hidden_dim),
+            nn.GELU(),
+            nn.Linear(hidden_dim, dim),
+            nn.Dropout(p=0.1)
+        ])
+
+    def forward(self, x, query):
+        x = x.repeat(int(query.shape[0]/x.shape[0]),1)
+        inp = torch.concat([x,query])
+        return self.MLP(inp)
+
+
 
 class BidirectionalTransformer(nn.Module):
     def __init__(self, args):
@@ -108,7 +128,7 @@ class BidirectionalTransformer(nn.Module):
 
         # The actual transformer encoder architecture
         self.enc_blocks = nn.ModuleList([Encoder(args.dim, args.hidden_dim) for _ in range(args.n_layers)])
-        self.dec_blocks = nn.ModuleList([Decoder(args.dim, args.hidden_dim) for _ in range(4)])# rn just 2 layers
+        self.dec_blocks = nn.ModuleList([Decoder(args.dim, args.hidden_dim) for _ in range(1)])#args.n_dec_ldayers
         # self.dec_blocks = Decoder(args.dim, args.hidden_dim)  # 1 layer
 
         #Final prediction is just linear + sigmoid
@@ -144,7 +164,8 @@ class BidirectionalTransformer(nn.Module):
         else:
             mask_embeds = self.pos_emb_MLP(mask_posns).detach()
         mask_embeds = mask_embeds + self.mask_token
-        embed = self.dec_blocks[0](embed, mask_embeds)
+        ## TESTING A NEW SETUP WITH ONLY CLASS TOKEN DECODER
+        embed = self.dec_blocks[0](embed[0,:], mask_embeds)
         for dec_block in self.dec_blocks[1:]:
             embed = dec_block(embed, embed)
         # embed = self.dec_blocks(embed,mask_embeds)
