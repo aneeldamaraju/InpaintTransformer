@@ -128,7 +128,7 @@ class BidirectionalTransformer(nn.Module):
 
         # The actual transformer encoder architecture
         self.enc_blocks = nn.ModuleList([Encoder(args.dim, args.hidden_dim) for _ in range(args.n_layers)])
-        self.dec_blocks = nn.ModuleList([Decoder(args.dim, args.hidden_dim) for _ in range(1)])#args.n_dec_ldayers
+        self.dec_blocks = nn.ModuleList([MLPDecoder(args.dim, args.hidden_dim) for _ in range(1)])#args.n_dec_ldayers
         # self.dec_blocks = Decoder(args.dim, args.hidden_dim)  # 1 layer
 
         #Final prediction is just linear + sigmoid
