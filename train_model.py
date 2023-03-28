@@ -20,7 +20,7 @@ default_args.psz = 16
 default_args.in_dim = default_args.psz ** 2
 default_args.dev = 'cuda:0' if torch.cuda.is_available() else 'cpu'
 # Transformer parameters
-default_args.num_image_tokens = 24
+default_args.num_image_tokens = 100
 default_args.num_unmask_tokens = int(default_args.num_image_tokens*.5)
 default_args.num_mask_tokens = 20 #default_args.num_image_tokens - default_args.num_unmask_token
 default_args.dim = 768
