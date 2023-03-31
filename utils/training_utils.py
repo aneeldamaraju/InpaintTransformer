@@ -6,8 +6,13 @@ from torch.nn import functional as F
 def load_data(img_and_pts, args):
     training_data = []
     for itr in range(len(img_and_pts)):
-        training_data.append(
-            [torch.tensor(img_and_pts[itr][0], device=args.dev), torch.tensor(img_and_pts[itr][1], device=args.dev)])
+        if not args.sdf:
+            training_data.append([torch.tensor(img_and_pts[itr][0], device=args.dev), torch.tensor(img_and_pts[itr][1], device=args.dev)])
+        else:
+            training_data.append(
+                [torch.tensor(img_and_pts[itr][0], device=args.dev), torch.tensor(img_and_pts[itr][1], device=args.dev),
+                 torch.tensor(img_and_pts[itr][2], device=args.dev)])
+
     return training_data
 
 

@@ -134,8 +134,10 @@ class BidirectionalTransformer(nn.Module):
         # self.dec_blocks = Decoder(args.dim, args.hidden_dim)  # 1 layer
 
         #Final prediction is just linear + sigmoid
-        self.decoder_pred = nn.Sequential(*[nn.Linear(args.dim,args.hidden_dim,bias=True),nn.GELU(),nn.Linear(args.hidden_dim,1,bias=True),nn.Sigmoid()])
-
+        if not args.sdf:
+            self.decoder_pred = nn.Sequential(*[nn.Linear(args.dim,args.hidden_dim,bias=True),nn.GELU(),nn.Linear(args.hidden_dim,1,bias=True),nn.Sigmoid()])
+        else:
+            self.decoder_pred = nn.Sequential(*[nn.Linear(args.dim, args.hidden_dim, bias=True), nn.GELU(), nn.Linear(args.hidden_dim, 1, bias=True)])
         self.ln = nn.LayerNorm(args.dim, eps=1e-12)
         self.drop = nn.Dropout(p=0.1)
         self.apply(weights_init)

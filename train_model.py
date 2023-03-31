@@ -2,7 +2,7 @@ from types import SimpleNamespace
 from utils.training_utils import *
 from models.bidirectional_transformer import BidirectionalTransformer
 from utils.shape_utils import *
-from utils.generate_shapes import generate_blob, generate_line
+from utils.generate_shapes import *
 from torch import nn
 import argparse
 import os
@@ -30,7 +30,8 @@ default_args.n_dec_layers = 4
 #Image parameters
 default_args.H = 256
 default_args.W = 256
-default_args.shape = "Blob" #"Blob", "Line"
+default_args.shape = "Blob" #"Blob", "Line, Line"
+default_args.sdf = False
 default_args.use_slope = False
 default_args.normalize_embed = False
 default_args.scale_embed = 1.0e0
@@ -87,8 +88,10 @@ class TrainTransformer:
 
                     # loss = F.cross_entropy((logits.T*mask_idxs).T.reshape(-1, logits.size(-1)), (target*mask_idxs).reshape(-1))
                     # loss = ((preds[mask_idxs,...] - target[mask_idxs,...])**2).mean(dim=-1) #Patchwise loss
-
-                    lossfn = nn.BCELoss()
+                    if args.sdf:
+                        lossfn = nn.MSELoss()
+                    else:
+                        lossfn = nn.BCELoss()
                     loss = lossfn(preds, target)
                     # print(loss.cpu().detach().numpy().item())
 
@@ -98,8 +101,8 @@ class TrainTransformer:
 
                     epoch_accuracy.append(100 * np.mean(
                         ((preds > .5).to(torch.int) == (target > .5).to(torch.int)).to(torch.int).cpu().numpy()))
+                    loss.backward()
                     if step % args.accum_grad == 0:
-                        loss.backward()
                         self.optim.step()
                         self.optim.zero_grad()
                     step += 1
@@ -133,10 +136,17 @@ if __name__ == '__main__':
         if args.shape == "Blob":
             img, rad = generate_blob(args.H, args.W)
         elif args.shape == "Line":
-            img, rad = generate_line(args.H,args.W,args.use_slope)
+            if not args.sdf:
+                img, rad = generate_line(args.H,args.W,args.use_slope)
+            else:
+                im, sdf, rad = generate_line_sdf(args.H, args.W, False)
+                sdf = sdf.squeeze()
         img = img.squeeze()
         pts = get_pts_on_curve(rad, P=500).squeeze()
-        training_list.append((img, pts))
+        if not args.sdf:
+            training_list.append((img, pts))
+        else:
+            training_list.append((im, sdf, pts))
     trained_model = TrainTransformer(training_list, args)
     trained_model.train(args)
     np.save(f'./ckpts/{args.name}/accuracy', trained_model.accuracy_list)

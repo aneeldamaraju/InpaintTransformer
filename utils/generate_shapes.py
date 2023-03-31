@@ -131,6 +131,35 @@ def generate_line(H, W,use_slope=True):
     return img, out_pts
 
 
+def generate_line_sdf(H, W, use_slope=False):
+    x_pos, y_pos = np.meshgrid(np.linspace(0, (H - 1), H), np.linspace(0, (W - 1), W))
+
+    thresh = int(.2 * W)
+    img_np = np.zeros((H, W), dtype=np.uint8)
+    x_c = int(np.random.uniform(.4, .6) * H)
+    ylist = np.arange(thresh, W - thresh, 0.001)
+    if use_slope:
+        # Not implemented
+        pass
+    else:
+        xlist = x_c + ylist * 0
+        if np.random.uniform() > .5:
+            pts = np.array([[x_c, 0], [x_c, W], [H, W], [H, 0]])
+            sdf = (x_pos - x_c) / H
+        else:
+            pts = np.array([[x_c, 0], [x_c, W], [0, W], [0, 0]])
+            sdf = (x_c - x_pos) / H
+
+    out_pts = np.array([[x, y] for (x, y) in zip(xlist, ylist)])
+    out_pts = out_pts.reshape((1, -1, 2))
+
+    pts = pts.reshape((1, -1, 2))
+    cv2.fillPoly(img_np, pts, color=255, lineType=cv2.LINE_AA)
+    img = img_np.reshape(img_np.shape[0], img_np.shape[1], 1)
+    img = np.asarray(img / 255.0, dtype=np.float32)
+    img = np.asarray(img > .5, dtype=np.float32)
+    return img, sdf, out_pts
+
 if __name__ == '__main__':
     import matplotlib.pyplot as plt
 
