@@ -64,8 +64,13 @@ class TrainTransformer:
             epoch_loss = 0
             epoch_accuracy = []
             for idx in shuffle_set:
-                img = train_dataset[idx][0]
-                pts = train_dataset[idx][1].cpu().numpy()
+                if args.sdf:
+                    img = train_dataset[idx][0]
+                    sdf = train_dataset[idx][1]
+                    pts = train_dataset[idx][2].cpu().numpy()
+                else:
+                    img = train_dataset[idx][0]
+                    pts = train_dataset[idx][1].cpu().numpy()
                 img = img.to(device=args.dev)
                 for _ in range(5):
                     # Generate a masked region
@@ -74,7 +79,11 @@ class TrainTransformer:
                     unmask_patches, unmask_coords = get_unmasked_aligned_blob_points(img, pts, mask_corners,
                                                                                      int(args.num_unmask_tokens), args)
                     #get patches from masked region
-                    mask_patches, mask_coords = get_random_mask_points(img, mask_corners, int(args.num_mask_tokens),
+                    if args.sdf:
+                        mask_patches, mask_coords = get_random_mask_points(sdf, mask_corners, int(args.num_mask_tokens),
+                                                                           args)
+                    else:
+                        mask_patches, mask_coords = get_random_mask_points(img, mask_corners, int(args.num_mask_tokens),
                                                                        args)
                     #normalize mask coordinates
                     mask_coords = torch.divide(mask_coords, args.H)
@@ -139,14 +148,14 @@ if __name__ == '__main__':
             if not args.sdf:
                 img, rad = generate_line(args.H,args.W,args.use_slope)
             else:
-                im, sdf, rad = generate_line_sdf(args.H, args.W, False)
+                img, sdf, rad = generate_line_sdf(args.H, args.W, False)
                 sdf = sdf.squeeze()
         img = img.squeeze()
         pts = get_pts_on_curve(rad, P=500).squeeze()
         if not args.sdf:
             training_list.append((img, pts))
         else:
-            training_list.append((im, sdf, pts))
+            training_list.append((img, sdf, pts))
     trained_model = TrainTransformer(training_list, args)
     trained_model.train(args)
     np.save(f'./ckpts/{args.name}/accuracy', trained_model.accuracy_list)
