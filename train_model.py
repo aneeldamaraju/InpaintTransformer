@@ -107,9 +107,10 @@ class TrainTransformer:
                     # loss = F.cross_entropy(logits.reshape(-1, logits.size(-1)), target.reshape(-1))
                     epoch_loss += loss.cpu().detach().numpy().item()
                     # add an accuracy count here
-
-                    epoch_accuracy.append(100 * np.mean(
-                        ((preds > .5).to(torch.int) == (target > .5).to(torch.int)).to(torch.int).cpu().numpy()))
+                    if args.sdf:
+                        epoch_accuracy.append(100 * np.mean(((preds > 0).to(torch.int) == (target > 0).to(torch.int)).to(torch.int).cpu().numpy()))
+                    else:
+                        epoch_accuracy.append(100 * np.mean(((preds > .5).to(torch.int) == (target > .5).to(torch.int)).to(torch.int).cpu().numpy()))
                     loss.backward()
                     if step % args.accum_grad == 0:
                         self.optim.step()
