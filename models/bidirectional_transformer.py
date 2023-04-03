@@ -1,7 +1,6 @@
 # https://github.com/dome272/MaskGIT-pytorch/blob/cff485ad3a14b6ed5f3aa966e045ea2bc8c68ad8/bidirectional_transformer.py#L106
 
 import torch
-from torch.nn import functional as F
 import torch.nn as nn
 
 

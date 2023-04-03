@@ -113,10 +113,17 @@ def generate_line(H, W,use_slope=True):
     if use_slope:
         slope = 1 / np.random.uniform(-.2, .2)
         xlist = x_c + ylist / slope
-        pts = np.array([[x_c, 0], [int(x_c + W / slope), W], [H, W], [H, 0]])
+        if np.random.uniform() > .5:
+            pts = np.array([[x_c, 0], [int(x_c + W / slope), W], [H, W], [H, 0]])
+        else:
+            pts = np.array([[x_c, 0], [int(x_c + W / slope), W], [0, W], [0, 0]])
+
     else:
         xlist = x_c + ylist *0
-        pts = np.array([[x_c, 0], [x_c, W], [H, W], [H, 0]])
+        if np.random.uniform() > .5:
+            pts = np.array([[x_c, 0], [x_c, W], [H, W], [H, 0]])
+        else:
+            pts = np.array([[x_c, 0], [x_c, W], [0, W], [0, 0]])
 
     out_pts = np.array([[x, y] for (x, y) in zip(xlist, ylist)])
     out_pts = out_pts.reshape((1, -1, 2))
